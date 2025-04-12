@@ -11,7 +11,7 @@ REPORT_EMAIL = "b2bgrowthexpo@gmail.com"
 SMTP_SERVER = "mail.miltonkeynesexpo.com"
 SMTP_PORT = 587
 SENDER_EMAIL = "mike@miltonkeynesexpo.com"
-SENDER_PASSWORD = "dvnn-&-((jdK"  # Replace with your real password
+SENDER_PASSWORD = "dvnn-&-((jdK"  # For production, use environment variables instead
 
 # Ensure log file exists
 if not os.path.exists(LOG_FILE):
@@ -21,14 +21,13 @@ if not os.path.exists(LOG_FILE):
 
 @app.route('/')
 def index():
-    return "Tracking Server is Running"
+    return "✅ Tracking Server is Running"
 
 @app.route('/track/open')
 def track_open():
     email = request.args.get('email')
     if email:
         log_event(email, 'open')
-    # Return a 1x1 transparent pixel
     return send_file("pixel.png", mimetype='image/png')
 
 @app.route('/track/click')
@@ -37,13 +36,12 @@ def track_click():
     url = request.args.get('url')
     if email and url:
         log_event(email, 'click')
-    return redirect(url)
+    return redirect(url or "https://miltonkeynesexpo.com")
 
 def log_event(email, event):
-    if email:
-        with open(LOG_FILE, 'a', newline='') as f:
-            writer = csv.writer(f)
-            writer.writerow([email, event, datetime.utcnow().isoformat()])
+    with open(LOG_FILE, 'a', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow([email, event, datetime.utcnow().isoformat()])
 
 def send_tracking_report():
     if not os.path.exists(LOG_FILE):
@@ -65,7 +63,6 @@ def send_tracking_report():
     report_filename = f"tracking_report_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.csv"
     summary.to_csv(report_filename, index=False)
 
-    # Send email with report
     try:
         msg = EmailMessage()
         msg['Subject'] = "📊 Email Tracking Report"
@@ -85,11 +82,14 @@ def send_tracking_report():
     except Exception as e:
         print(f"❌ Failed to send tracking report: {e}")
 
-# Run every 12 hours
+# Start scheduler
 scheduler = BackgroundScheduler()
 scheduler.add_job(send_tracking_report, 'interval', hours=12)
 scheduler.start()
-send_tracking_report()  # Call it manually to test the email report generation
 
+# Optional: send report on startup for testing
+send_tracking_report()
+
+# Render-compatible server binding
 if __name__ == '__main__':
-    app.run(debug=False, port=8000)
+    app.run(debug=False, host='0.0.0.0', port=8000)
