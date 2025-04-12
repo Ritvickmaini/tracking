@@ -38,6 +38,11 @@ def track_click():
         log_event(email, 'click')
     return redirect(url or "https://miltonkeynesexpo.com")
 
+@app.route('/send_report')
+def send_report():
+    send_tracking_report()
+    return "✅ Tracking report sent successfully!"
+
 def log_event(email, event):
     with open(LOG_FILE, 'a', newline='') as f:
         writer = csv.writer(f)
@@ -82,7 +87,7 @@ def send_tracking_report():
     except Exception as e:
         print(f"❌ Failed to send tracking report: {e}")
 
-# Start scheduler
+# Start scheduler to send report every 12 hours
 scheduler = BackgroundScheduler()
 scheduler.add_job(send_tracking_report, 'interval', hours=12)
 scheduler.start()
