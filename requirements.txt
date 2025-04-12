@@ -1,0 +1,4 @@
+Flask
+apscheduler
+pandas
+python-dotenv
