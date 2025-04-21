@@ -63,7 +63,7 @@ def send_tracking_report():
     if df_recent.empty:
         return
 
-    summary = df_recent.groupby('email')['event'].agg(lambda x: set(x)).reset_index()
+    summary = df_recent.groupby(['email', 'subject'])['event'].agg(lambda x: set(x)).reset_index()
     summary['opened'] = summary['event'].apply(lambda x: 'Yes' if 'open' in x else 'No')
     summary['clicked'] = summary['event'].apply(lambda x: 'Yes' if 'click' in x else 'No')
     summary.drop(columns=['event'], inplace=True)
