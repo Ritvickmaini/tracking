@@ -17,7 +17,7 @@ SENDER_PASSWORD = "dvnn-&-((jdK"  # For production, use environment variables in
 if not os.path.exists(LOG_FILE):
     with open(LOG_FILE, 'w', newline='') as f:
         writer = csv.writer(f)
-        writer.writerow(["email", "event", "timestamp"])
+        writer.writerow(["email", "event", "subject", "timestamp"])  # Added 'subject' column
 
 @app.route('/')
 def index():
@@ -26,16 +26,18 @@ def index():
 @app.route('/track/open')
 def track_open():
     email = request.args.get('email')
-    if email:
-        log_event(email, 'open')
+    subject = request.args.get('subject')  # Capture the subject from the query parameter
+    if email and subject:
+        log_event(email, 'open', subject)  # Pass subject to log_event
     return send_file("pixel.png", mimetype='image/png')
 
 @app.route('/track/click')
 def track_click():
     email = request.args.get('email')
     url = request.args.get('url')
-    if email and url:
-        log_event(email, 'click')
+    subject = request.args.get('subject')  # Capture the subject from the query parameter
+    if email and url and subject:
+        log_event(email, 'click', subject)  # Pass subject to log_event
     return redirect(url or "https://miltonkeynesexpo.com")
 
 @app.route('/send_report')
@@ -43,10 +45,11 @@ def send_report():
     send_tracking_report()
     return "✅ Tracking report sent successfully!"
 
-def log_event(email, event):
+def log_event(email, event, subject):
+    # Log the event with email, event type, subject, and timestamp
     with open(LOG_FILE, 'a', newline='') as f:
         writer = csv.writer(f)
-        writer.writerow([email, event, datetime.utcnow().isoformat()])
+        writer.writerow([email, event, subject, datetime.utcnow().isoformat()])
 
 def send_tracking_report():
     if not os.path.exists(LOG_FILE):
