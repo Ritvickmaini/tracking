@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 
 app = Flask(__name__)
 LOG_FILE = "tracking_log.csv"
-REPORT_EMAIL = "b2bgrowthexpo@gmail.com"
+REPORT_EMAIL = ["b2bgrowthexpo@gmail.com", "miltonkeynesexpo@gmail.com"]
 SMTP_SERVER = "mail.miltonkeynesexpo.com"
 SMTP_PORT = 587
 SENDER_EMAIL = "mike@miltonkeynesexpo.com"
@@ -56,11 +56,12 @@ def send_tracking_report():
         return
 
     df = pd.read_csv(LOG_FILE)
-    df['timestamp'] = pd.to_datetime(df['timestamp'])
-    cutoff = datetime.utcnow() - timedelta(hours=12)
+    df['timestamp'] = pd.to_datetime(df['timestamp'], format='mixed', errors='coerce')
+    cutoff = datetime.utcnow() - timedelta(hours=3)  # Only include last 3 hours of activity
     df_recent = df[df['timestamp'] >= cutoff]
 
     if df_recent.empty:
+        print("⚠️ No tracking data in the last 3 hours.")
         return
 
     summary = df_recent.groupby(['email', 'subject'])['event'].agg(lambda x: set(x)).reset_index()
@@ -75,8 +76,8 @@ def send_tracking_report():
         msg = EmailMessage()
         msg['Subject'] = "📊 Email Tracking Report"
         msg['From'] = SENDER_EMAIL
-        msg['To'] = REPORT_EMAIL
-        msg.set_content("Attached is the latest email open/click tracking report.")
+        msg['To'] = ", ".join(REPORT_EMAIL)  # ✅ send to both addresses
+        msg.set_content("Attached is the latest email open/click tracking report (last 3 hours).")
 
         with open(report_filename, 'rb') as f:
             msg.add_attachment(f.read(), maintype='application', subtype='octet-stream', filename=report_filename)
@@ -86,16 +87,16 @@ def send_tracking_report():
         server.login(SENDER_EMAIL, SENDER_PASSWORD)
         server.send_message(msg)
         server.quit()
-        print("✅ Tracking report sent.")
+        print("✅ Tracking report sent to:", REPORT_EMAIL)
     except Exception as e:
         print(f"❌ Failed to send tracking report: {e}")
 
-# Start scheduler to send report every 12 hours
+# ⏰ Run the report every 3 hours
 scheduler = BackgroundScheduler()
-scheduler.add_job(send_tracking_report, 'interval', hours=12)
+scheduler.add_job(send_tracking_report, 'interval', hours=3)
 scheduler.start()
 
-# Optional: send report on startup for testing
+# Optional: send report once on startup for testing
 send_tracking_report()
 
 # Render-compatible server binding
